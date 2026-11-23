@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palia Villager Gift Finder</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; color: #222; background: #fafafa; }
+  h1 { font-size: 1.4rem; }
+  .sub { color: #555; font-size: 0.9rem; margin-bottom: 1.5rem; }
+  label { display: block; font-weight: bold; margin-top: 1.5rem; }
+  input, select { width: 100%; padding: 0.5rem; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box; }
+  .results { margin-top: 1rem; }
+  .villager-card { border: 1px solid #ccc; border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem; background: #fff; }
+  .villager-card h3 { margin: 0 0 0.4rem 0; }
+  .loved { color: #a0005c; }
+  .liked { color: #0b6e4f; }
+  .empty { color: #777; font-style: italic; }
+  .list-group { margin-top: 0.3rem; }
+  .list-group span.tag { display: inline-block; margin: 0.15rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.85rem; background: #eee; }
+  .list-group span.tag.hit { background: #ffe9a8; font-weight: bold; }
+  footer { margin-top: 2.5rem; font-size: 0.8rem; color: #777; border-top: 1px solid #ddd; padding-top: 0.75rem; }
+</style>
+</head>
+<body>
+
+<h1>Palia Villager Gift Finder</h1>
+<p class="sub">Type an item you're holding to see which villagers love or like it. Or pick a villager to see their full gift list.</p>
+
+<label for="item-search">Search by item (fish, crop, dish, material...)</label>
+<input id="item-search" type="text" placeholder="e.g. Pearl, Fish Stew, Sernuk Hide" autocomplete="off">
+<div id="item-results" class="results"></div>
+
+<label for="villager-select">Or pick a villager</label>
+<select id="villager-select">
+  <option value="">-- choose a villager --</option>
+</select>
+<div id="villager-result" class="results"></div>
+
+<footer id="disclosure"></footer>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  var searchBox = document.getElementById("item-search");
+  var itemResults = document.getElementById("item-results");
+  var villagerSelect = document.getElementById("villager-select");
+  var villagerResult = document.getElementById("villager-result");
+  var disclosure = document.getElementById("disclosure");
+
+  PALIA_VILLAGERS.forEach(function (v) {
+    var opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = v.name;
+    villagerSelect.appendChild(opt);
+  });
+
+  function tagList(items, hitSet, cls) {
+    if (!items.length) return '<span class="empty">none listed</span>';
+    return items.map(function (g) {
+      var isHit = hitSet && hitSet.indexOf(g) !== -1;
+      return '<span class="tag' + (isHit ? ' hit' : '') + '">' + escapeHtml(g) + '</span>';
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderItemResults(query) {
+    if (!query.trim()) {
+      itemResults.innerHTML = "";
+      return;
+    }
+    var matches = findGiftMatches(query);
+    if (!matches.length) {
+      itemResults.innerHTML = '<p class="empty">No villager on record loves or likes an item matching "' + escapeHtml(query) + '".</p>';
+      return;
+    }
+    var html = "";
+    matches.forEach(function (m) {
+      html += '<div class="villager-card"><h3>' + escapeHtml(m.name) + "</h3>";
+      if (m.lovedHits.length) {
+        html += '<div class="loved">Loved: ' + m.lovedHits.map(escapeHtml).join(", ") + "</div>";
+      }
+      if (m.likedHits.length) {
+        html += '<div class="liked">Liked: ' + m.likedHits.map(escapeHtml).join(", ") + "</div>";
+      }
+      html += "</div>";
+    });
+    itemResults.innerHTML = html;
+  }
+
+  function renderVillager(name) {
+    if (!name) {
+      villagerResult.innerHTML = "";
+      return;
+    }
+    var v = findVillager(name);
+    if (!v) {
+      villagerResult.innerHTML = "";
+      return;
+    }
+    var html = '<div class="villager-card"><h3>' + escapeHtml(v.name) + "</h3>";
+    html += '<div class="loved">Loved</div><div class="list-group">' + tagList(v.loved) + "</div>";
+    html += '<div class="liked" style="margin-top:0.5rem;">Liked</div><div class="list-group">' + tagList(v.liked) + "</div>";
+    html += "</div>";
+    villagerResult.innerHTML = html;
+  }
+
+  searchBox.addEventListener("input", function () {
+    renderItemResults(searchBox.value);
+  });
+  villagerSelect.addEventListener("change", function () {
+    renderVillager(villagerSelect.value);
+  });
+
+  disclosure.textContent = "Data from a single source (" + PALIA_SOURCE.url + "), last modified " + PALIA_SOURCE.lastModified + "; re-fetched " + PALIA_SOURCE.fetchedOn + ". May predate game patches. This source lists only loved and liked gifts, not dislikes, and weekly want rotations are not covered. " + PALIA_VILLAGERS.length + " villagers listed.";
+})();
+</script>
+
+</body>
+</html>
